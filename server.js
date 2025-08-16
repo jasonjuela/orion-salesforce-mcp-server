@@ -27,6 +27,16 @@ app.use(express.json({ limit: '2mb' }));
 app.use(express.static('public'));
 
 app.get('/health', (_, res) => res.json({ ok: true }));
+
+// API Versioning - v1 routes (backward compatible)
+app.use('/v1/auth', authRoute);
+app.use('/v1/generate', generateRoute);
+app.use('/v1', generateStreamRoute);
+app.use('/v1/clarify', clarifyRoute);
+app.use('/v1/metrics', metricsRoute);
+app.use('/v1/search', searchRoute);
+
+// Legacy routes (maintain backward compatibility)
 app.use('/auth', authRoute);
 app.use('/', configApi);
 app.use('/', exportRoute);

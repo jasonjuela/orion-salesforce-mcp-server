@@ -1,0 +1,365 @@
+openapi: 3.0.3
+info:
+  title: Orion Salesforce MCP Server API
+  description: |
+    Intelligent Salesforce data interaction server for wholesale distribution systems.
+    Provides natural language querying with SOQL/SOSL generation and intelligent field resolution.
+  version: 1.0.0
+  contact:
+    name: Orion MCP Server
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:3018
+    description: Development server
+  - url: http://localhost:3018/v1
+    description: Versioned API (v1)
+
+paths:
+  /generate/stream:
+    post:
+      summary: Generate streaming response for natural language query
+      description: |
+        Primary endpoint for natural language Salesforce queries. Returns Server-Sent Events stream
+        with query plan, data retrieval status, and LLM-generated response.
+      operationId: generateStream
+      tags:
+        - Query
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryRequest'
+            examples:
+              wine_query:
+                summary: Wine alcohol percentage query
+                value:
+                  user_question: "What is the alcohol percentage of Cockburn's wines?"
+                  orgId: "default"
+                  sessionId: "demo-session-001"
+              inventory_query:
+                summary: Inventory summary query
+                value:
+                  user_question: "Show me all wines created last month"
+                  orgId: "default"
+                  sessionId: "demo-session-002"
+      responses:
+        '200':
+          description: Successful stream start
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: Server-Sent Events stream
+              example: |
+                PLAN: {"object":"owsc__Item__c","soql":"SELECT Id, Name, owsc__Alcohol_Percentage__c FROM owsc__Item__c WHERE (Name LIKE '%cockburn%') LIMIT 200","fields":["Id","Name","owsc__Alcohol_Percentage__c"]}
+                
+                DATA ROWS: 42
+                
+                Based on the data retrieved from Salesforce, the alcohol percentages for Cockburn's wines are...
+                [DONE]
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /search/cross-object:
+    post:
+      summary: Cross-object SOSL search
+      description: |
+        Perform SOSL search across multiple Salesforce objects simultaneously.
+        Returns structured results from multiple object types.
+      operationId: crossObjectSearch
+      tags:
+        - Search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrossObjectSearchRequest'
+            example:
+              searchTerms: ["Cockburn"]
+              orgId: "default"
+              limit: 200
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /search/capabilities:
+    get:
+      summary: Get organization capabilities
+      description: |
+        Check available search and DML capabilities for the specified organization.
+        Returns feature flags and permission information.
+      operationId: getCapabilities
+      tags:
+        - Capabilities
+      parameters:
+        - name: orgId
+          in: query
+          required: true
+          schema:
+            type: string
+            default: default
+          description: Organization identifier
+      responses:
+        '200':
+          description: Organization capabilities
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CapabilitiesResponse'
+
+  /auth/login:
+    get:
+      summary: Initiate Salesforce OAuth login
+      description: Redirects to Salesforce OAuth login page
+      operationId: login
+      tags:
+        - Authentication
+      parameters:
+        - name: orgId
+          in: query
+          required: false
+          schema:
+            type: string
+            default: default
+          description: Organization identifier
+      responses:
+        '302':
+          description: Redirect to Salesforce OAuth
+
+  /auth/callback:
+    get:
+      summary: OAuth callback handler
+      description: Handles Salesforce OAuth callback and stores tokens
+      operationId: authCallback
+      tags:
+        - Authentication
+      responses:
+        '200':
+          description: Authentication successful
+        '400':
+          description: Authentication failed
+
+components:
+  schemas:
+    QueryRequest:
+      type: object
+      required:
+        - user_question
+        - orgId
+        - sessionId
+      properties:
+        user_question:
+          type: string
+          description: Natural language query about Salesforce data
+          example: "What is the alcohol percentage of Cockburn's wines?"
+        orgId:
+          type: string
+          description: Organization identifier for configuration and tokens
+          example: "default"
+        sessionId:
+          type: string
+          description: Session identifier for tracking conversation context
+          example: "demo-session-001"
+
+    CrossObjectSearchRequest:
+      type: object
+      required:
+        - searchTerms
+        - orgId
+      properties:
+        searchTerms:
+          type: array
+          items:
+            type: string
+          description: Array of terms to search for across objects
+          example: ["Cockburn", "wine"]
+        targetObjects:
+          type: array
+          items:
+            type: string
+          description: Specific objects to search (optional)
+          example: ["Account", "owsc__Item__c"]
+        orgId:
+          type: string
+          description: Organization identifier
+          example: "default"
+        limit:
+          type: integer
+          description: Maximum number of results to return
+          default: 200
+          example: 200
+
+    SearchResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            searchRecords:
+              type: array
+              items:
+                $ref: '#/components/schemas/SalesforceRecord'
+        totalRecords:
+          type: integer
+          example: 42
+
+    SalesforceRecord:
+      type: object
+      properties:
+        attributes:
+          type: object
+          properties:
+            type:
+              type: string
+              example: "owsc__Item__c"
+            url:
+              type: string
+              example: "/services/data/v52.0/sobjects/owsc__Item__c/a041N00001LHpOFQA1"
+        Id:
+          type: string
+          example: "a041N00001LHpOFQA1"
+        Name:
+          type: string
+          example: "COCKBURN'S FINE RUBY"
+      additionalProperties: true
+
+    CapabilitiesResponse:
+      type: object
+      properties:
+        orgId:
+          type: string
+          example: "default"
+        capabilities:
+          type: object
+          properties:
+            read:
+              type: boolean
+              example: true
+            dml:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                  example: false
+                insert:
+                  type: boolean
+                  example: false
+                update:
+                  type: boolean
+                  example: false
+                upsert:
+                  type: boolean
+                  example: false
+                delete:
+                  type: boolean
+                  example: false
+                undelete:
+                  type: boolean
+                  example: false
+                merge:
+                  type: boolean
+                  example: false
+        features:
+          type: object
+          properties:
+            sosl:
+              type: boolean
+              example: true
+            soql:
+              type: boolean
+              example: true
+            crossObjectSearch:
+              type: boolean
+              example: true
+            intelligentFieldResolution:
+              type: boolean
+              example: true
+            naturalLanguageProcessing:
+              type: boolean
+              example: true
+
+    QueryPlan:
+      type: object
+      properties:
+        object:
+          type: string
+          description: Target Salesforce object API name
+          example: "owsc__Item__c"
+        soql:
+          type: string
+          description: Generated SOQL query
+          example: "SELECT Id, Name, owsc__Alcohol_Percentage__c FROM owsc__Item__c WHERE (Name LIKE '%cockburn%') LIMIT 200"
+        fields:
+          type: array
+          items:
+            type: string
+          description: Selected fields for the query
+          example: ["Id", "Name", "owsc__Alcohol_Percentage__c"]
+        where:
+          type: string
+          description: WHERE clause conditions
+          example: "(Name LIKE '%cockburn%')"
+        type:
+          type: string
+          enum: ["soql", "sosl"]
+          description: Query type
+          example: "soql"
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error type identifier
+          example: "needs_object"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Could not identify a Salesforce object from your question"
+        details:
+          type: object
+          description: Additional error context
+          additionalProperties: true
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: Salesforce access token (managed internally)
+
+tags:
+  - name: Query
+    description: Natural language query operations
+  - name: Search
+    description: Cross-object search operations
+  - name: Capabilities
+    description: Organization capability information
+  - name: Authentication
+    description: Salesforce OAuth operations
