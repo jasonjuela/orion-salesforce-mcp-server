@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MCP Stream Test</title>
+    <style>
+        body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 20px; }
+        #out { white-space: pre-wrap; border: 1px solid #ddd; padding: 12px; min-height: 160px; }
+        .small { color: #666; font-size: 12px; }
+        label { margin-right: 6px; }
+    </style>
+    </head>
+<body>
+    <h2>MCP Streaming Test</h2>
+    <form id="f">
+        <label>Session:</label> <input id="session" value="dev" />
+        <label>Org:</label> <input id="org" value="default" />
+        <br/><br/>
+        <label>Question:</label>
+        <input id="q" style="width: 80%" value="Summarize Accounts created last month" />
+        <button type="submit">Start Stream</button>
+    </form>
+    <p class="small">This uses GET /generate/stream so it runs in any browser.</p>
+    <div id="out"></div>
+    <script>
+    // Read URL parameters and populate form fields
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('sessionId')) {
+        document.getElementById('session').value = urlParams.get('sessionId');
+    }
+    if (urlParams.get('orgId')) {
+        document.getElementById('org').value = urlParams.get('orgId');
+    }
+    if (urlParams.get('question')) {
+        document.getElementById('q').value = decodeURIComponent(urlParams.get('question'));
+    }
+
+    const out = document.getElementById('out');
+    const form = document.getElementById('f');
+    let src;
+    let closed = false;
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (src) { try { src.close(); } catch {} }
+        out.textContent = '';
+        closed = false;
+        const sessionId = document.getElementById('session').value || 'dev';
+        const orgId = document.getElementById('org').value || 'default';
+        const q = encodeURIComponent(document.getElementById('q').value || 'Summarize Accounts created last month');
+        const url = `/generate/stream?sessionId=${encodeURIComponent(sessionId)}&orgId=${encodeURIComponent(orgId)}&user_question=${q}`;
+        out.textContent = `Connecting to ${url}\n`;
+        src = new EventSource(url);
+        src.onmessage = (e) => {
+            try {
+                if (e.data === '[DONE]') { src.close(); return; }
+                const json = JSON.parse(e.data);
+                if (json.type === 'plan') {
+                    out.textContent += `\nPLAN: ${JSON.stringify(json.plan)}\n\n`;
+                } else if (json.type === 'data') {
+                    out.textContent += `\nDATA ROWS: ${json.rows}\n\n`;
+                } else if (json.type === 'delta') {
+                    out.textContent += json.delta;
+                } else if (json.type === 'error') {
+                    out.textContent += `\nERROR: ${typeof json.error === 'string' ? json.error : JSON.stringify(json.error)}\nSOQL: ${json.soql || ''}\n`;
+                    try { src.close(); } catch {}
+                    closed = true;
+                } else if (json.type === 'done') {
+                    out.textContent += `\n\n[DONE]`;
+                    try { src.close(); } catch {}
+                    closed = true;
+                }
+            } catch {}
+        };
+        src.onerror = () => { if (!closed) out.textContent += `\n[stream error] readyState=${src.readyState}\n`; };
+        setTimeout(() => {
+            if (!closed && out.textContent.indexOf('PLAN:') === -1 && out.textContent.indexOf('ERROR:') === -1) {
+                out.textContent += `\nNo events yet. Make sure you're logged in (/auth/login) and session/org are correct.\n`;
+            }
+        }, 4000);
+    });
+    </script>
+</body>
+</html>
+
