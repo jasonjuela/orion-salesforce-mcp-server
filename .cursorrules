@@ -1,0 +1,11 @@
+## When Making Changes
+
+- Check for similar functionality already in the codebase; prefer reuse over new patterns.
+- Ensure changes work across dev, test, and prod orgs; avoid environment-specific assumptions.
+- Update JSON configuration files (e.g., `data/configs/*.json`) instead of hardcoding logic.
+- Test with multiple org configurations if available; consider namespace and record type differences.
+- Validate security implications (FLS/object permissions); do not expose restricted fields.
+- Update documentation (e.g., `docs/`, READMEs) when adding features or behaviors.
+- Don’t break features that are already unit/integration tested; consider cross-feature impact.
+- Prefer minimal, incremental edits; remove dead/duplicate logic if introducing a new approach.
+

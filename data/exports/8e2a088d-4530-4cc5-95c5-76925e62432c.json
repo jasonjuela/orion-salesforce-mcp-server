@@ -1,0 +1,11 @@
+{
+  "status": "complete",
+  "size": 938,
+  "soql": "SELECT Id, Name FROM owsc__Item_Lot__c LIMIT 20",
+  "org_id": "default",
+  "sessionId": "dev",
+  "format": "csv",
+  "filename": "export-8e2a088d-4530-4cc5-95c5-76925e62432c.csv",
+  "path": "D:\\MVP Cursor Apps\\orion-salesforce-mcp-server\\data\\exports\\8e2a088d-4530-4cc5-95c5-76925e62432c.csv",
+  "expiresAt": 1755028982053
+}

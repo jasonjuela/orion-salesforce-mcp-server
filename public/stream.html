@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>MCP Stream Test</title>
+    <title>MCP LLM Test</title>
     <style>
         body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 20px; }
         #out { white-space: pre-wrap; border: 1px solid #ddd; padding: 12px; min-height: 160px; }
@@ -12,16 +12,16 @@
     </style>
     </head>
 <body>
-    <h2>MCP Streaming Test</h2>
+    <h2>MCP LLM-Driven Test</h2>
     <form id="f">
         <label>Session:</label> <input id="session" value="dev" />
         <label>Org:</label> <input id="org" value="default" />
         <br/><br/>
         <label>Question:</label>
-        <input id="q" style="width: 80%" value="Summarize Accounts created last month" />
-        <button type="submit">Start Stream</button>
+        <input id="q" style="width: 80%" value="What wines have alcohol percentage above 12%?" />
+        <button type="submit">Generate Query</button>
     </form>
-    <p class="small">This uses GET /generate/stream so it runs in any browser.</p>
+    <p class="small">This uses the new LLM-driven /v1/generate-llm endpoint with intelligent query planning.</p>
     <div id="out"></div>
     <script>
     // Read URL parameters and populate form fields
@@ -38,46 +38,108 @@
 
     const out = document.getElementById('out');
     const form = document.getElementById('f');
-    let src;
-    let closed = false;
-    form.addEventListener('submit', (e) => {
+    let abortController;
+    
+    form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        if (src) { try { src.close(); } catch {} }
+        if (abortController) { abortController.abort(); }
+        abortController = new AbortController();
+        
         out.textContent = '';
-        closed = false;
         const sessionId = document.getElementById('session').value || 'dev';
         const orgId = document.getElementById('org').value || 'default';
-        const q = encodeURIComponent(document.getElementById('q').value || 'Summarize Accounts created last month');
-        const url = `/generate/stream?sessionId=${encodeURIComponent(sessionId)}&orgId=${encodeURIComponent(orgId)}&user_question=${q}`;
-        out.textContent = `Connecting to ${url}\n`;
-        src = new EventSource(url);
-        src.onmessage = (e) => {
-            try {
-                if (e.data === '[DONE]') { src.close(); return; }
-                const json = JSON.parse(e.data);
-                if (json.type === 'plan') {
-                    out.textContent += `\nPLAN: ${JSON.stringify(json.plan)}\n\n`;
-                } else if (json.type === 'data') {
-                    out.textContent += `\nDATA ROWS: ${json.rows}\n\n`;
-                } else if (json.type === 'delta') {
-                    out.textContent += json.delta;
-                } else if (json.type === 'error') {
-                    out.textContent += `\nERROR: ${typeof json.error === 'string' ? json.error : JSON.stringify(json.error)}\nSOQL: ${json.soql || ''}\n`;
-                    try { src.close(); } catch {}
-                    closed = true;
-                } else if (json.type === 'done') {
-                    out.textContent += `\n\n[DONE]`;
-                    try { src.close(); } catch {}
-                    closed = true;
-                }
-            } catch {}
+        const userQuestion = document.getElementById('q').value || 'What wines have alcohol percentage above 12%?';
+        
+        const requestBody = {
+            user_question: userQuestion,
+            org_id: orgId,
+            sessionId: sessionId
         };
-        src.onerror = () => { if (!closed) out.textContent += `\n[stream error] readyState=${src.readyState}\n`; };
-        setTimeout(() => {
-            if (!closed && out.textContent.indexOf('PLAN:') === -1 && out.textContent.indexOf('ERROR:') === -1) {
-                out.textContent += `\nNo events yet. Make sure you're logged in (/auth/login) and session/org are correct.\n`;
+        
+        out.textContent = `🤖 LLM Query Generation Starting...\n`;
+        out.textContent += `Question: "${userQuestion}"\n`;
+        out.textContent += `Org: ${orgId}, Session: ${sessionId}\n\n`;
+        
+        try {
+            const response = await fetch('/v1/generate-llm', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody),
+                signal: abortController.signal
+            });
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                out.textContent += `❌ ERROR: ${response.status} ${response.statusText}\n${errorText}\n`;
+                return;
             }
-        }, 4000);
+            
+            const result = await response.json();
+            
+            // Display LLM Query Plan
+            if (result.metadata?.queryPlan) {
+                out.textContent += `🧠 LLM QUERY PLAN:\n`;
+                out.textContent += `- Query Type: ${result.metadata.queryPlan.queryType}\n`;
+                out.textContent += `- Target Object: ${result.metadata.queryPlan.targetObject}\n`;
+                out.textContent += `- Confidence: ${result.metadata.queryPlan.confidence}\n`;
+                out.textContent += `- Business Context: ${result.metadata.queryPlan.businessContext}\n`;
+                out.textContent += `- Reasoning: ${result.metadata.queryPlan.reasoning}\n\n`;
+                
+                if (result.metadata.queryPlan.soql) {
+                    out.textContent += `🔍 Generated SOQL:\n${result.metadata.queryPlan.soql}\n\n`;
+                }
+                if (result.metadata.queryPlan.sosl) {
+                    out.textContent += `🔍 Generated SOSL:\n${result.metadata.queryPlan.sosl}\n\n`;
+                }
+            }
+            
+            // Display Results
+            if (result.type === 'text' && result.content) {
+                // Handle LLM text responses (like aggregated analysis)
+                out.textContent += `📊 ANALYSIS:\n`;
+                out.textContent += result.content + '\n';
+            } else if (result.content?.rows?.length > 0) {
+                // Handle table responses
+                out.textContent += `📊 RESULTS (${result.content.rows.length} rows):\n`;
+                out.textContent += `Columns: ${result.content.columns.join(', ')}\n\n`;
+                
+                // Show first few rows
+                const maxRows = Math.min(10, result.content.rows.length);
+                for (let i = 0; i < maxRows; i++) {
+                    const row = result.content.rows[i];
+                    out.textContent += `Row ${i + 1}: ${JSON.stringify(row)}\n`;
+                }
+                
+                if (result.content.rows.length > 10) {
+                    out.textContent += `... and ${result.content.rows.length - 10} more rows\n`;
+                }
+            } else {
+                out.textContent += `📊 RESULTS: No data returned\n`;
+            }
+            
+            // Display Security Info
+            if (result.metadata?.security) {
+                out.textContent += `\n🔒 SECURITY INFO:\n`;
+                if (result.metadata.security.flsRestricted) {
+                    out.textContent += `- Field-level security applied\n`;
+                }
+                if (result.metadata.security.droppedFields?.length > 0) {
+                    out.textContent += `- Dropped fields: ${result.metadata.security.droppedFields.join(', ')}\n`;
+                }
+            }
+            
+            out.textContent += `\n✅ LLM Query Complete!`;
+            
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                out.textContent += `\n⏹️ Request cancelled\n`;
+            } else {
+                out.textContent += `\n❌ ERROR: ${error.message}\n`;
+                console.error('LLM Query Error:', error);
+            }
+        }
     });
     </script>
 </body>

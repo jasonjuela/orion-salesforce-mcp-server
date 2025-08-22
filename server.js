@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import generateRoute from './src/routes/generate.js';
+import generateLLMRoute from './src/routes/generateLLM.js';
 import authRoute from './src/routes/auth.js';
 import configApi from './src/config/configApi.js';
 import exportRoute from './src/routes/export.js';
@@ -31,6 +32,7 @@ app.get('/health', (_, res) => res.json({ ok: true }));
 // API Versioning - v1 routes (backward compatible)
 app.use('/v1/auth', authRoute);
 app.use('/v1/generate', generateRoute);
+app.use('/v1/generate-llm', generateLLMRoute); // NEW: LLM-driven query generation
 app.use('/v1', generateStreamRoute);
 app.use('/v1/clarify', clarifyRoute);
 app.use('/v1/metrics', metricsRoute);
@@ -44,6 +46,7 @@ app.use('/', streamRoute);
 app.use('/', promptRegistry);
 app.use('/', describeRoute);
 app.use('/generate', generateRoute);
+app.use('/generate-llm', generateLLMRoute); // NEW: LLM-driven query generation
 app.use('/', generateStreamRoute);
 app.use('/clarify', clarifyRoute);
 app.use('/metrics', metricsRoute);

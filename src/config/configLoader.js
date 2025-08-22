@@ -271,6 +271,54 @@ export async function listPersonas() {
 }
 
 /**
+ * Load business context configuration
+ */
+export async function loadBusinessContext(orgId) {
+  const cacheKey = `business-context:${orgId}`;
+  const cached = configCache.get(cacheKey);
+  
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data;
+  }
+  
+  try {
+    const contextPath = path.join(CONFIG_DIR, 'business-context.json');
+    const contextData = await fs.readFile(contextPath, 'utf8');
+    const businessContext = JSON.parse(contextData);
+    
+    configCache.set(cacheKey, { data: businessContext, timestamp: Date.now() });
+    
+    logger.info('Loaded business context from file', { orgId, contextPath });
+    return businessContext;
+    
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      logger.warn('Failed to load business context, using default', { orgId, error: error.message });
+    }
+    
+    const defaultBusinessContext = {
+      orgId,
+      description: "Default business context for LLM-driven query generation",
+      primaryBusinessObjects: {
+        "owsc__Item__c": {
+          businessPurpose: "Wine and product inventory items",
+          keyBusinessConcepts: ["wine", "product", "inventory", "item"],
+          commonQueries: ["inventory levels", "product searches"],
+          keyFields: ["Name", "owsc__Alcohol_Percentage__c"],
+          relationshipImportance: "high"
+        }
+      },
+      keyRelationships: {},
+      queryPatterns: {}
+    };
+    
+    configCache.set(cacheKey, { data: defaultBusinessContext, timestamp: Date.now() });
+    
+    return defaultBusinessContext;
+  }
+}
+
+/**
  * Clear configuration cache
  */
 export function clearConfigCache() {

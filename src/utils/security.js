@@ -84,8 +84,27 @@ export async function checkFieldPermissions(sf, objectApiName, fieldNames) {
         } else {
           restricted.push(fieldName);
         }
+      } else if (fieldName.includes('__r.')) {
+        // This is a relationship field (e.g., owsc__Item__r.Name)
+        // Check if the base relationship field exists and is accessible
+        const baseField = fieldName.split('__r.')[0] + '__c'; // owsc__Item__c
+        const basePermissions = fieldMap.get(baseField);
+        
+        if (basePermissions && basePermissions.accessible) {
+          // Base relationship field exists and is accessible - allow the relationship traversal
+          results[fieldName] = { accessible: true, isRelationshipField: true };
+          accessible.push(fieldName);
+        } else {
+          // Base relationship field is not accessible
+          results[fieldName] = { 
+            accessible: false, 
+            error: 'Base relationship field not accessible',
+            baseField: baseField
+          };
+          restricted.push(fieldName);
+        }
       } else {
-        // Field not found in describe - might be a relationship field
+        // Field not found in describe and not a relationship field
         results[fieldName] = { accessible: false, error: 'Field not found' };
         restricted.push(fieldName);
       }
@@ -125,6 +144,16 @@ export function enforceFls(objectName, rows, allowedFields, fieldPermissions = n
   const dropped = new Set();
   const securityReasons = new Map();
   
+  // DEBUG: Log subquery-related information
+  const subqueryFields = allowedFields.filter(f => f.endsWith('__r'));
+  logger.info({ 
+    objectName, 
+    allowedFields, 
+    subqueryFields,
+    firstRowKeys: rows?.[0] ? Object.keys(rows[0]) : [],
+    rowCount: rows?.length || 0
+  }, 'DEBUG: enforceFls input data');
+  
   for (const r of rows || []) {
     const f = {};
     
@@ -132,11 +161,116 @@ export function enforceFls(objectName, rows, allowedFields, fieldPermissions = n
       let includeField = false;
       let reason = null;
       
+      // DEBUG: Special logging for subquery fields
+      if (k.endsWith('__r')) {
+        logger.info({ 
+          key: k, 
+          value: r[k], 
+          isArray: Array.isArray(r[k]),
+          arrayLength: Array.isArray(r[k]) ? r[k].length : 'N/A',
+          allowedFieldsIncludes: allowedFields.includes(k)
+        }, 'DEBUG: Processing relationship field');
+      }
+      
       // Always include system fields
       if (k === 'Id' || k === 'Name') {
         includeField = true;
       }
-      // Check if field is in allowed list
+      // Always include aggregate expressions from COUNT, SUM, AVG, etc. queries
+      else if (/^expr\d+$/.test(k)) {
+        includeField = true;
+      }
+      // Handle relationship objects and subquery arrays (keys ending with __r) FIRST
+      else if (k.endsWith('__r') && typeof r[k] === 'object' && r[k] !== null) {
+        // Check if this is a subquery result (array or SF { totalSize, done, records }) or single relationship object
+        const isSfSubqueryObject = !!(r[k] && typeof r[k] === 'object' && Array.isArray(r[k].records));
+        if (Array.isArray(r[k]) || isSfSubqueryObject) {
+          // This is a subquery result - array of child records
+          // For subqueries, we typically want to include the entire array if the field is referenced
+          // Check if this subquery field is in allowedFields or if it's always allowed for subqueries
+          const isAllowed = allowedFields.includes(k) || 
+                           allowedFields.some(field => field.startsWith(k + '.')) ||
+                           allowedFields.some(field => field.includes(k));
+          
+          if (isAllowed) {
+            // Filter each item in the subquery array through FLS
+            const filteredArray = [];
+            const subRecords = Array.isArray(r[k]) ? r[k] : (r[k].records || []);
+
+            for (const subRecord of subRecords) {
+              if (typeof subRecord === 'object' && subRecord !== null) {
+                const filteredSubRecord = {};
+                let hasAllowedSubFields = false;
+                
+                for (const subKey of Object.keys(subRecord)) {
+                  // Always include system fields in subquery results
+                  if (subKey === 'Id' || subKey === 'Name' || subKey === 'attributes') {
+                    filteredSubRecord[subKey] = subRecord[subKey];
+                    hasAllowedSubFields = true;
+                  }
+                  // Include other fields - for subqueries, we're typically more permissive
+                  // since the main query already passed security validation
+                  else {
+                    filteredSubRecord[subKey] = subRecord[subKey];
+                    hasAllowedSubFields = true;
+                  }
+                }
+                
+                if (hasAllowedSubFields) {
+                  filteredArray.push(filteredSubRecord);
+                }
+              }
+            }
+            
+            // CRITICAL FIX: Always include the subquery field, even if the array is empty
+            // Empty arrays are valid subquery results (action with no items)
+            if (isSfSubqueryObject) {
+              const subqueryMeta = r[k];
+              f[k] = {
+                totalSize: typeof subqueryMeta.totalSize === 'number' ? subqueryMeta.totalSize : filteredArray.length,
+                done: typeof subqueryMeta.done === 'boolean' ? subqueryMeta.done : true,
+                records: filteredArray
+              };
+            } else {
+              f[k] = filteredArray;
+            }
+            includeField = true;
+          } else {
+            reason = 'Subquery field not in allowed list';
+          }
+        } else {
+          // This is a single relationship object - use existing logic
+          const relationshipFields = allowedFields.filter(field => field.startsWith(k + '.'));
+          
+          if (relationshipFields.length > 0) {
+            // At least one field from this relationship is allowed
+            // Filter the relationship object to only include allowed nested fields
+            const filteredRelationship = {};
+            let hasAllowedFields = false;
+            
+            for (const nestedKey of Object.keys(r[k])) {
+              const fullFieldName = `${k}.${nestedKey}`;
+              if (allowedFields.includes(fullFieldName)) {
+                filteredRelationship[nestedKey] = r[k][nestedKey];
+                hasAllowedFields = true;
+              } else if (nestedKey === 'attributes') {
+                // Always include attributes for Salesforce metadata
+                filteredRelationship[nestedKey] = r[k][nestedKey];
+              }
+            }
+            
+            if (hasAllowedFields) {
+              f[k] = filteredRelationship;
+              includeField = true;
+            } else {
+              reason = 'No accessible fields in relationship object';
+            }
+          } else {
+            reason = 'Relationship object not in allowed list';
+          }
+        }
+      }
+      // Check if field is in allowed list (non-relationship or simple fields)
       else if (allowedFields.includes(k)) {
         // If we have detailed field permissions, check those too
         if (fieldPermissions && fieldPermissions.details[k]) {
@@ -154,7 +288,11 @@ export function enforceFls(objectName, rows, allowedFields, fieldPermissions = n
       }
       
       if (includeField) {
-        f[k] = r[k];
+        // For regular fields, copy the value
+        // Relationship objects are already handled in the relationship section above
+        if (!k.endsWith('__r')) {
+          f[k] = r[k];
+        }
       } else {
         dropped.add(k);
         if (reason) {

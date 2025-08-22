@@ -1,0 +1,67 @@
+{
+  "orgId": "default",
+  "description": "Default org configuration for testing",
+  "namespaces": ["owsc__"],
+  "guardrails": {
+    "piiRedaction": true,
+    "maxRows": 500,
+    "defaultDateRange": "LAST_N_MONTHS:12",
+    "allowedObjects": [],
+    "blockedObjects": [
+      "UserRecordAccess", "ObjectPermissions", "PermissionSet",
+      "FlowOrchestrationWorkItem", "ProcessInstance", "ProcessInstanceHistory",
+      "WorkflowRule", "WorkflowTask", "AsyncApexJob", "ApexTestQueueItem",
+      "SearchActivity", "RecentlyViewed", "LoginHistory", "EventLogFile",
+      "FeedItem", "FeedComment", "EntitySubscription", "DuplicateRecordItem",
+      "RecordAction", "ActivityHistory", "OpenActivity", "CombinedAttachment"
+    ]
+  },
+  "outputPrefs": {
+    "defaultType": "markdown",
+    "preferTablesForListsOver": 10,
+    "includeMetadata": true
+  },
+  "preferences": {
+    "showSoql": true,
+    "autoExpandRelationships": true,
+    "enableFuzzyMatching": true
+  },
+  "importantObjects": [
+    "Account", "Contact", "Opportunity", "Lead", "Case", "Product2",
+    "owsc__Item__c", "owsc__Item_Lot__c", "owsc__Order__c", "owsc__Inventory_Location__c"
+  ],
+  "frequentObjects": [
+    "Account", "Contact", "owsc__Item__c", "owsc__Item_Lot__c"
+  ],
+  "objectSynonyms": {
+    "owsc__Item__c": ["item", "items", "product item", "inventory item"],
+    "owsc__Item_Lot__c": ["lot", "lots", "item lot", "inventory lot", "batch", "stock lot"],
+    "owsc__Inventory_Location__c": ["location", "locations", "warehouse", "site", "storage location"],
+    "Product2": ["product", "products", "catalog item"],
+    "Account": ["customer", "customers", "client", "company", "organization"],
+    "Contact": ["person", "people", "individual", "contact person"],
+    "Opportunity": ["deal", "deals", "sale", "sales opportunity"],
+    "Lead": ["prospect", "prospects", "potential customer"],
+    "Case": ["ticket", "tickets", "support case", "issue"]
+  },
+  "fieldMappings": {
+    "name": ["Name", "Title", "Subject", "Label"],
+    "description": ["Description", "Comments", "Notes", "Details"],
+    "amount": ["Amount", "Value", "Price", "Total", "Cost"],
+    "date": ["CreatedDate", "LastModifiedDate", "CloseDate", "ActivityDate"],
+    "status": ["Status", "Stage", "StageName", "State"]
+  },
+  "domainContext": {
+    "inventory": ["owsc__Item__c", "owsc__Item_Lot__c", "owsc__Inventory_Location__c"],
+    "sales": ["Account", "Contact", "Opportunity", "Lead", "Product2"],
+    "service": ["Case", "Contact", "Account"],
+    "orders": ["owsc__Order__c", "owsc__Item__c", "Account"]
+  },
+  "intelligentSuggestions": {
+    "enableContextualRanking": true,
+    "preferenceWeight": 0.3,
+    "recencyWeight": 0.2,
+    "successRateWeight": 0.4,
+    "contextWeight": 0.1
+  }
+}

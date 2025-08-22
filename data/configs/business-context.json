@@ -1,0 +1,404 @@
+{
+  "orgId": "wholesale-system",
+  "description": "Business context for LLM-driven query generation",
+  
+  "primaryBusinessObjects": {
+    "owsc__Item__c": {
+      "businessPurpose": "Wine and product inventory items - core business objects for tracking products, wines, and merchandise",
+      "keyBusinessConcepts": ["wine", "product", "inventory", "item", "merchandise", "stock"],
+      "commonQueries": ["inventory levels", "product searches", "wine characteristics", "alcohol content", "product availability"],
+              "keyFields": ["Name", "owsc__Alcohol_Percentage__c", "owsc__Brand_Family__c", "RecordType.Name", "owsc__Vintage__c"],
+        "fieldMeanings": {
+          "owsc__Alcohol_Percentage__c": "Wine alcohol content percentage (e.g., 12.5%)",
+          "RecordType.Name": "Product types: Product (Same as Wine), Merchandise, Non-Inventory, Kit",
+          "owsc__Vintage__c": "Year the wine was produced",
+          "owsc__Brand_Family__c": "Brand Family of the product"
+        },
+      "relationshipImportance": "high",
+      "notes": "Primary inventory object - most product-related questions should target this"
+    },
+    "owsc__Item_Lot__c": {
+      "businessPurpose": "SYSTEM-CALCULATED inventory tracking - represents the sum of inventory transactions from the wholesale system, NOT physical counts",
+      "keyBusinessConcepts": ["system inventory", "calculated quantities", "transaction-based", "automated tracking", "theoretical inventory"],
+      "commonQueries": ["system inventory levels", "calculated quantities", "theoretical vs actual comparison"],
+      "keyFields": ["owsc__Cases_On_Hand__c", "owsc__Available_Cases__c", "owsc__On_Hand_Count__c", "owsc__Item__c", "owsc__Item__r.Name", "owsc__Inventory_Location__c", "owsc__Inventory_Location__r.Name"],
+      "fieldMeanings": {
+        "owsc__Cases_On_Hand__c": "System-calculated cases based on inventory transactions",
+        "owsc__Available_Cases__c": "System-calculated available cases for sale/allocation",
+        "owsc__On_Hand_Count__c": "System-calculated count of units on hand based on transactions",
+        "owsc__Item__c": "ID of the related wine/product item",
+        "owsc__Item__r.Name": "Name of the specific wine/product item",
+        "owsc__Inventory_Location__c": "ID of the related warehouse/storage location",
+        "owsc__Inventory_Location__r.Name": "Name of the warehouse/storage location"
+      },
+      "relationshipImportance": "high",
+      "notes": "This is NOT physical inventory - use owsc__Physical_Inventory__c for actual physical counts",
+      "relationshipFields": {
+        "owsc__Item__c": "Link to the product/wine item",
+        "owsc__Inventory_Location__c": "Link to the warehouse/storage location"
+      },
+      "fieldLevelSecurityNote": "If owsc__Item__r.Name or owsc__Inventory_Location__r.Name show as null, use the ID fields and mention that detailed names may be restricted by security"
+    },
+    "owsc__Physical_Inventory__c": {
+      "businessPurpose": "ACTUAL PHYSICAL COUNTS Header- records created to keep track of physical inventory counts by Inventory Location",
+      "keyBusinessConcepts": ["physical count", "warehouse counting", "actual inventory", "worker counts", "bottle counting", "physical verification"],
+      "commonQueries": ["physical inventory records", "actual counts", "warehouse counts", "physical verification", "count discrepancies"],
+      "keyFields": ["Name", "owsc__Physical_Inventory_Date__c", "owsc__Inventory_Location__r.Name", "owsc__Total_Items_To_Count__c", "owsc__Items_Counted__c", "owsc__Items_Not_Counted__c"],
+      "fieldMeanings": {
+        "owsc__Physical_Inventory_Date__c": "Date when the physical count was performed",
+        "owsc__Inventory_Location__r.Name": "Warehouse/location where counting occurred",
+        "owsc__Total_Items_To_Count__c": "Total number of items to count",
+        "owsc__Items_Counted__c": "Number of items counted",
+        "owsc__Items_Not_Counted__c": "Number of items not counted"
+      },
+      "relationshipImportance": "high",
+      "notes": "This represents ACTUAL physical counts by workers, not system calculations"
+    },
+    "owsc__Physical_Inventory_Item__c": {
+      "businessPurpose": "ACTUAL PHYSICAL COUNTS Line Items - records created when warehouse workers physically count bottles/cases of wine in the warehouse, child of owsc__Physical_Inventory__c",
+      "keyBusinessConcepts": ["physical count item", "warehouse counting item", "actual inventory item", "worker counts item", "bottle counting item", "physical verification item"],
+      "commonQueries": ["physical inventory records", "actual counts", "warehouse counts", "physical verification", "count discrepancies"],
+      "keyFields": ["Name", "owsc__Physical_Inventory__r.Name", "owsc__Item__r.Name", "owsc__Inventory_Location__r.Name", "owsc__Approved_Physical_Count_Cases__c", "owsc__Approved_Physical_Count_Bottles__c", "owsc__Approved_Physical_Count_Quantity__c"],
+      "fieldMeanings": {
+        "owsc__Physical_Inventory__r.Name": "Name of the physical inventory header",
+        "owsc__Item__r.Name": "Name of the item being counted",
+        "owsc__Inventory_Location__r.Name": "Warehouse/location where counting occurred",
+        "owsc__Approved_Physical_Count_Cases__c": "Number of cases counted",
+        "owsc__Approved_Physical_Count_Bottles__c": "Number of bottles counted",
+        "owsc__Approved_Physical_Count_Quantity__c": "Number of units counted"
+      },
+      "relationshipImportance": "high",
+      "notes": "This represents ACTUAL physical item counts by workers, not system calculations"
+    },
+    "owsc__Inventory_transaction__c": {
+      "businessPurpose": "Individual inventory movements and transactions - receipts, shipments, transfers, adjustments, and other inventory activities",
+      "keyBusinessConcepts": ["inventory transaction", "inventory movement", "receipt", "shipment", "transfer", "adjustment", "inventory activity"],
+      "commonQueries": ["inventory transactions", "movement history", "transaction details", "inventory activity by item", "transaction by location"],
+      "keyFields": ["Name", "owsc__Transaction_Date__c", "owsc__Transaction_Type__c", "owsc__Item__c", "owsc__Item__r.Name", "owsc__Location__c", "owsc__Quantity__c", "owsc__Unit_of_Measure__c"],
+      "fieldMeanings": {
+        "owsc__Transaction_Date__c": "Date when the inventory transaction occurred",
+        "owsc__Transaction_Type__c": "Type of transaction (Receipt, Shipment, Transfer, Adjustment, etc.)",
+        "owsc__Item__c": "ID of the related wine/product item",
+        "owsc__Item__r.Name": "Name of the specific wine/product item",
+        "owsc__Location__c": "Warehouse/location where transaction occurred",
+        "owsc__Quantity__c": "Number of units involved in the transaction (positive for receipts, negative for shipments)",
+        "owsc__Unit_of_Measure__c": "Unit of measure for the quantity (Cases, Bottles, etc.)"
+      },
+      "relationshipImportance": "high",
+      "notes": "These individual transactions aggregate up to create the system-calculated quantities in owsc__Item_Lot__c",
+      "relationshipFields": {
+        "owsc__Item__c": "Link to the product/wine item",
+        "owsc__Location__c": "Link to the warehouse/storage location"
+      }
+    },
+    "owsc__Inventory_Location__c": {
+      "businessPurpose": "Warehouses, storage locations, and facilities where inventory is kept",
+      "keyBusinessConcepts": ["location", "warehouse", "facility", "storage", "site"],
+      "commonQueries": ["inventory by location", "warehouse capacity", "location details"],
+      "keyFields": ["Name",  "owsc__Inventory_Location_Status__c"],
+      "relationshipImportance": "medium"
+    },
+    "Account": {
+      "businessPurpose": "Customers, suppliers, and business partners",
+      "keyBusinessConcepts": ["customer", "client", "supplier", "vendor", "account"],
+      "commonQueries": ["customer orders", "supplier information", "account details"],
+      "keyFields": ["Name", "Type", "BillingCity", "BillingState", "BillingCountry"],
+      "relationshipImportance": "medium"
+    },
+    "owsc__Action__c": {
+      "businessPurpose": "Orders, transactions, and business actions (headers)",
+      "keyBusinessConcepts": ["order", "transaction", "action", "header", "purchase order", "po"],
+      "commonQueries": ["order status", "order history", "transaction tracking"],
+      "keyFields": ["Name", "owsc__Stage__r.Name", "RecordType.Name", "owsc__Action_Date__c", "owsc__Shipped_Date__c","owsc__Estimated_Shipping_Date__c", "owsc__Account__c", "owsc__Ship_From_Location__c", "owsc__Ship_From_Account__c", "owsc__Ship_To_Location__c", "owsc__Ship_To_Account__c", "owsc__Total_Gross_Price__c", "owsc__Total_Discount__c", "owsc__Total_Net_Price__cq"],
+      "fieldMeanings": {
+        "RecordType.Name": "Bottling Receipt, Consumer Return, Consumer Sales Order, Direct Import Sales Order, Export Sales Order, Inventory Adjustment, Inventory Receipt, Inventory Relabel, Inventory Transfer, Invoice Only, Post Invoice Order, Purchase Order, Removal Breakage, Removal Dump to Bulk, Removal Family Use, Removal Tasting, Removal Testing, Tax Paid Removal, Wholesale Return, Wholesale Sales Order",
+        "owsc__Stage__r.Name": "Current status of the order (e.g., Draft, Confirmed, Shipped)",
+        "owsc__Action_Date__c": "Date the order was placed",
+        "owsc__Account__c": "Reference to the customer account",
+        "owsc__Shipped_Date__c": "Date the order was shipped",
+        "owsc__Ship_From_Location__c": "Warehouse/location where the order was shipped from",
+        "owsc__Ship_To_Location__c": "Warehouse/location where the order was shipped to",
+        "owsc__Estimated_Shipping_Date__c": "Estimated date the order was shipped",
+        "owsc__Ship_From_Account__c": "Account where the order was shipped from",
+        "owsc__Ship_To_Account__c": "Account where the order was shipped to",
+        "owsc__Total_Gross_Price__c": "Total gross price of the order",
+        "owsc__Total_Discount__c": "Total discount of the order",
+        "owsc__Total_Net_Price__c": "Total net price of the order"
+      },
+      "relationshipImportance": "high"
+    },
+    "owsc__Action_Item__c": {
+      "businessPurpose": "Individual line items within orders or transactions",
+      "keyBusinessConcepts": ["line item", "order item", "order line", "item detail"],
+      "commonQueries": ["order details", "line item information", "ordered quantities"],
+      "keyFields": ["owsc__Action__c", "owsc__Action__r.Name","owsc__Item__r.Name", "owsc__Ship_From_Location_2__c", "owsc__Cases_Ordered__c", "owsc__Cases_Shipped__c", "owsc__Bottles_Ordered__c", "owsc__Bottles_Shipped__c", "owsc__Case_Price__c", "owsc__Unit_Price__c", "owsc__Gross_Extended_Price__c", "owsc__Net_Extended_Price__c", "owsc__Total_Discount__c", "owsc__Cost__c", "owsc__Total_Cost__c"],
+      "fieldMeanings": {
+        "owsc__Action__c": "Reference to the parent order/action header",
+        "owsc__Action__r.Name": "Name of the parent order/action header",
+        "owsc__Item__r.Name": "Reference to the specific wine/product being ordered",
+        "owsc__Ship_From_Location_2__c": "Warehouse/location where the order was shipped from",
+        "owsc__Cases_Ordered__c": "Cases ordered for this line item",
+        "owsc__Cases_Shipped__c": "Cases shipped for this line item",
+        "owsc__Bottles_Ordered__c": "Bottles ordered for this line item",
+        "owsc__Bottles_Shipped__c": "Bottles shipped for this line item",
+        "owsc__Case_Price__c": "Price per case for this line item",
+        "owsc__Unit_Price__c": "Price per unit for this line item",
+        "owsc__Gross_Extended_Price__c": "Gross extended price for this line item",
+        "owsc__Net_Extended_Price__c": "Net extended price for this line item",
+        "owsc__Total_Discount__c": "Discount extended price for this line item",
+        "owsc__Cost__c": "Cost per unit for this line item",
+        "owsc__Total_Cost__c": "Total cost for this line item"
+      },
+      "relationshipImportance": "high"
+    }
+  },
+
+  "keyRelationships": {
+    "owsc__Item_Lot__c": {
+      "owsc__Item__c": "Each lot belongs to a specific item/product",
+      "owsc__Inventory_Location__r.Name": "Each lot is stored at a specific location"
+    },
+    "owsc__Action_Item__c": {
+      "owsc__Action__c": "Line items belong to order headers",
+      "owsc__Item__c": "Line items reference specific products"
+    },
+    "owsc__Action__c_relationships": {
+      "Account": "Orders are associated with customer accounts"
+    }
+  },
+
+  "businessContextHints": {
+    "physical_inventory_queries": {
+      "triggers": ["physical inventory", "physical count", "actual count", "warehouse count", "worker count", "bottle count", "physical verification", "count discrepancies"],
+      "suggestedObjects": ["owsc__Physical_Inventory__c"],
+      "suggestedFields": ["Name", "owsc__Count_Date__c", "owsc__Counted_Quantity__c", "owsc__Location__c"],
+      "priority": "high"
+    },
+    "system_inventory_queries": {
+      "triggers": ["system inventory", "calculated inventory", "theoretical inventory", "transaction-based inventory", "on hand", "available", "stock levels"],
+      "suggestedObjects": ["owsc__Item_Lot__c"],
+      "suggestedFields": ["owsc__Cases_On_Hand__c", "owsc__Available_Cases__c", "owsc__Item__c"],
+      "priority": "medium"
+    },
+    "product_queries": {
+      "triggers": ["wine", "product", "item", "alcohol", "vintage", "brand"],
+      "suggestedObjects": ["owsc__Item__c"],
+      "suggestedFields": ["Name", "owsc__Alcohol_Percentage__c", "owsc__Brand_Family__c", "owsc__Vintage__c"],
+      "priority": "high"
+    },
+    "order_queries": {
+      "triggers": ["order", "purchase", "transaction", "customer", "action"],
+      "suggestedObjects": ["owsc__Action__c", "owsc__Action_Item__c"],
+      "suggestedFields": ["owsc__Status__c", "owsc__Order_Date__c", "owsc__Quantity__c"],
+      "priority": "medium"
+    },
+    "location_queries": {
+      "triggers": ["location", "warehouse", "facility", "where", "site"],
+      "suggestedObjects": ["owsc__Inventory_Location__c"],
+      "suggestedFields": ["Name", "owsc__Inventory_Location_Status__c"],
+      "priority": "medium"
+    }
+  },
+
+  "aggregationRules": {
+    "owsc__Item_Lot__c": {
+      "whenToAggregate": ["system count", "total", "sum", "aggregate", "by location", "by item", "grouped"],
+      "aggregateBy": ["owsc__Inventory_Location__r.Name", "owsc__Item__r.Name"],
+      "sumFields": ["owsc__Cases_On_Hand__c", "owsc__Available_Cases__c", "owsc__On_Hand_Count__c"],
+      "requiredFilters": [
+        "owsc__Status__c = 'Active'",
+        "owsc__On_Hand_Count__c != 0"
+      ],
+      "noLimitForCounts": true,
+      "instructions": "When users ask for system counts or totals, retrieve ALL records (no LIMIT), apply active status filters, then aggregate the quantities by location and item in your response analysis."
+    }
+  },
+
+  "retryStrategies": {
+    "keywordMatching": {
+      "inventory": [
+        "owsc__Physical_Inventory__c", 
+        "owsc__Item_Lot__c"
+      ],
+      "physical": [
+        "owsc__Physical_Inventory__c"
+      ],
+      "action": [
+        "owsc__Action__c",
+        "owsc__Action_Item__c"
+      ],
+      "customer": [
+        "Account",
+        "Contact"
+      ],
+      "product": [
+        "owsc__Item__c"
+      ],
+      "wine": [
+        "owsc__Item__c"
+      ],
+      "location": [
+        "owsc__Inventory_Location__c"
+      ]
+    },
+    "wildcardStrategies": {
+      "description": "Configuration for wildcard retry strategies when exact matches return 0 results",
+      "fieldPatterns": [
+        {
+          "fields": ["Name"],
+          "priority": 1,
+          "description": "Search product/item names first - most likely to contain brand names"
+        },
+        {
+          "fields": ["owsc__Brand_Family__c"],
+          "priority": 2,
+          "description": "Search dedicated brand field"
+        },
+        {
+          "fields": ["Name", "owsc__Brand_Family__c"],
+          "priority": 3,
+          "description": "Search both name and brand fields for comprehensive results"
+        },
+        {
+          "fields": ["owsc__Description__c"],
+          "priority": 4,
+          "description": "Search description field as last resort"
+        }
+      ],
+      "searchTermExtraction": {
+        "skipTerms": ["Active", "Inactive", "true", "false", "null"],
+        "minimumTermLength": 2,
+        "removeEscapeCharacters": true
+      }
+    }
+  },
+
+  "conversationalPersonality": {
+    "name": "Kaomi",
+    "role": "Your friendly Salesforce assistant for wholesale wine distribution",
+    "traits": ["helpful", "professional", "approachable", "knowledgeable", "wine-savvy"],
+    "greeting_style": "warm and welcoming",
+    "response_style": "conversational but informative",
+    "specialties": ["wine data", "inventory management", "wholesale distribution"],
+    "personality_notes": "Knowledgeable about wine and wholesale business, but maintains a warm, approachable demeanor. Can discuss both business data and casual topics naturally."
+  },
+
+  "conversationalDetection": {
+    "description": "Configuration for detecting conversational vs data queries",
+    "confidence_threshold": 0.7,
+    "fallback_behavior": "assume_salesforce_query",
+    "fallback_keywords": {
+      "greetings": ["hello", "hi", "hey", "good morning", "good afternoon", "good evening"],
+      "personal": ["how are you", "how's your day", "how is your day", "what's your favorite", "tell me about yourself", "who are you"],
+      "social": ["nice weather", "good day", "how's it going", "what's up", "how are things"]
+    }
+  },
+
+  "queryOptimizations": {
+    "countQueries": {
+      "triggers": ["count", "total", "sum", "how many", "aggregate"],
+      "rules": {
+        "noLimit": true,
+        "selectMinimalFields": true,
+        "applyStatusFilters": true
+      }
+    }
+  },
+
+  "subqueryPatterns": {
+    "description": "Configuration for detecting and generating SOQL subqueries for parent-child relationships",
+    "triggerPhrases": {
+      "parentAndChild": [
+        "and their",
+        "and its",
+        "with their",
+        "with its", 
+        "including their",
+        "including its",
+        "along with their",
+        "along with its"
+      ],
+      "specificPatterns": [
+        "action and items",
+        "actions and their items", 
+        "order and line items",
+        "orders and their items",
+        "inventory and items",
+        "receipt and items",
+        "physical inventory and items"
+      ]
+    },
+    "relationshipMappings": {
+      "owsc__Action__c": {
+        "childObject": "owsc__Action_Item__c",
+        "relationshipName": "owsc__Action_Items__r",
+        "parentField": "owsc__Action__c",
+        "description": "Actions (orders) with their line items",
+        "subqueryFields": ["Id", "Name", "owsc__Item__r.Name", "owsc__Cases_Ordered__c", "owsc__Cases_Shipped__c", "owsc__Bottles_Ordered__c", "owsc__Bottles_Shipped__c", "owsc__Case_Price__c", "owsc__Gross_Extended_Price__c"]
+      },
+      "owsc__Physical_Inventory__c": {
+        "childObject": "owsc__Physical_Inventory_Item__c", 
+        "relationshipName": "Physical_Inventory_Items__r",
+        "parentField": "owsc__Physical_Inventory__c",
+        "description": "Physical inventory headers with their counted items",
+        "subqueryFields": ["Id", "Name", "owsc__Item__r.Name", "owsc__Approved_Physical_Count_Cases__c", "owsc__Approved_Physical_Count_Bottles__c", "owsc__Approved_Physical_Count_Quantity__c"]
+      }
+    },
+    "subqueryFormatting": {
+      "instructions": "When generating SOQL subqueries, use the format: (SELECT fields FROM relationship_name) within the main query",
+      "maxSubqueryFields": 8,
+      "prioritizeFields": ["Name", "related object names", "quantities", "prices"],
+      "fallbackBehavior": "If subquery fails, execute separate queries for parent and child objects"
+    }
+  },
+
+  "llmFormattingInstructions": {
+    "description": "Configuration for how the LLM should format hierarchical query results",
+    "nestedDataFormatting": {
+      "enabled": true,
+      "parentHeaderStyle": "Use emojis and visual separators (━━━) for parent record headers",
+      "childListStyle": "Present child records as numbered or bulleted lists beneath parent",
+      "fieldGrouping": "Group related fields logically (e.g., quantities together, prices together)",
+      "visualSeparation": "Use clear visual elements like emojis, lines, and spacing"
+    },
+    "responsePatterns": {
+      "actionWithItems": {
+        "headerFormat": "📋 {RecordType.Name}: {Name}",
+        "separatorLine": "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        "childSectionHeader": "📦 ITEMS:",
+        "childItemFormat": "{owsc__Item__r.Name} - Ordered: {owsc__Cases_Ordered__c} cases, Shipped: {owsc__Cases_Shipped__c} cases"
+      },
+      "physicalInventoryWithItems": {
+        "headerFormat": "📊 PHYSICAL INVENTORY: {Name}",
+        "separatorLine": "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        "childSectionHeader": "🔢 COUNTED ITEMS:",
+        "childItemFormat": "{owsc__Item__r.Name} - Cases: {owsc__Approved_Physical_Count_Cases__c}, Bottles: {owsc__Approved_Physical_Count_Bottles__c}"
+      }
+    }
+  },
+  
+  "wineExpertiseDetection": {
+    "enabled": true,
+    "pairingTriggers": [
+      "goes with", "pair with", "pairs with", "goes well with", "pairs well with", 
+      "best with", "match with", "matches with", "complement", "complements", 
+      "recommend for", "good with", "works with", "works well with", 
+      "suitable for", "ideal for", "perfect for", "right for", "fits with", 
+      "accompanies", "goes together with", "suits", "perfect pairing for", 
+      "ideal pairing for", "best pairing for", "wine for", "drink with", 
+      "beverage for", "what to drink with", "what wine with", "wine to go with", 
+      "wine that goes with", "wine that pairs with", "wine that complements", 
+      "wine that matches", "what goes with", "what pairs with", "what complements",
+      "goes great with", "pairs great with", "good pairing with", "nice with", 
+      "served with", "enjoy with", "have with", "choose for", "select for",
+      "best choice for", "top pick for", "recommend with", "suggest for",
+      "should I drink with", "should pair with", "would go with", "would pair with",
+      "wine selection for", "wine choice for", "best bottle for", "which wine for",
+      "pick a wine for", "choose a wine for", "wine suggestion for"
+    ],
+    "foodTriggers": ["steak", "beef", "lamb", "chicken", "fish", "salmon", "lobster", "cheese", "chocolate", "dessert", "ice cream", "dinner", "rib eye", "ribeye", "pork", "duck", "turkey"],
+    "queryLimit": 5000,
+    "statusFilter": "owsc__Item_Status__c = 'Active'",
+    "instructions": "When wine pairing questions are detected, route to text analysis mode so the LLM can apply sommelier expertise and recommend specific wines from inventory with detailed explanations"
+  }
+}

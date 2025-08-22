@@ -1,0 +1,79 @@
+{
+  "queryPreferences": {
+    "defaultLimit": 200,
+    "maxLimit": 2000,
+    "preferredOrderBy": ["LastModifiedDate DESC", "Name ASC", "CreatedDate DESC"],
+    "alwaysIncludeFields": ["Id", "Name"],
+    "defaultDateRange": "LAST_90_DAYS",
+    "timeZone": "America/Los_Angeles"
+  },
+
+  "queryOptimization": {
+    "preferSelectiveWhere": true,
+    "avoidWildcardLeading": true,
+    "limitSubqueries": 3,
+    "maxJoins": 5,
+    "indexedFields": ["Name", "CreatedDate", "LastModifiedDate", "Id"],
+    "preferIndexedFilters": true
+  },
+
+  "securityGuidelines": {
+    "avoidObjects": [
+      "User", "Profile", "Organization", "UserRole", "PermissionSet",
+      "ObjectPermissions", "FieldPermissions", "UserRecordAccess",
+      "LoginHistory", "SetupAuditTrail", "AsyncApexJob"
+    ],
+    "sensitiveFieldPatterns": [
+      "SSN", "Social_Security", "Credit_Card", "Password", "Secret",
+      "Token", "Key", "Encrypted", "Hash"
+    ],
+    "respectFLS": true,
+    "respectSharingRules": true
+  },
+
+  "soqlBestPractices": {
+    "useBulkAPI": false,
+    "preventSOQLInjection": true,
+    "validateFieldAccess": true,
+    "optimizeForReadability": true,
+    "includeComments": true,
+    "formatForHumans": true,
+    "escapeStringLiterals": true,
+    "escapingRules": {
+      "singleQuotes": "Use backslash escaping for apostrophes: 'Cockburn\\'s' (preferred) or double quotes: 'Cockburn''s'",
+      "backslashes": "Escape backslashes as \\\\ in string literals",
+      "preferredMethod": "Use backslash escaping (\\') as it's cleaner and more readable",
+      "avoidSpecialChars": "Be careful with quotes, backslashes, and newlines in WHERE clauses"
+    }
+  },
+
+  "soslGuidelines": {
+    "minimumSearchLength": 2,
+    "maxSearchTerms": 10,
+    "preferredObjects": [
+      "owsc__Item__c", "Account", "owsc__Action__c", 
+      "owsc__Inventory_Location__c", "owsc__Item_Lot__c"
+    ],
+    "searchableFields": [
+      "Name", "Description", "owsc__Type__c", "BillingCity",
+      "owsc__Country__c", "owsc__Status__c"
+    ],
+    "returnFields": ["Id", "Name", "Type", "LastModifiedDate"]
+  },
+
+  "errorHandling": {
+    "gracefulFailure": true,
+    "provideSuggestions": true,
+    "explainLimitations": true,
+    "offerAlternatives": true
+  },
+
+  "responseFormat": {
+    "includeMetadata": true,
+    "explainReasoning": true,
+    "showFieldMappings": true,
+    "includeRecordCount": true,
+    "formatDates": "yyyy-MM-dd",
+    "formatNumbers": true
+  }
+}

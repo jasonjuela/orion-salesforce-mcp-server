@@ -1,0 +1,147 @@
+{
+  "orgId": "wholesale-system",
+  "description": "Wholesale distribution system configuration optimized for inventory, logistics, and supply chain management",
+  "namespaces": ["owsc__"],
+  "guardrails": {
+    "piiRedaction": true,
+    "maxRows": 1000,
+    "defaultDateRange": "LAST_N_MONTHS:6",
+    "allowedObjects": [],
+    "blockedObjects": [
+      "UserRecordAccess", "ObjectPermissions", "PermissionSet",
+      "FlowOrchestrationWorkItem", "ProcessInstance", "ProcessInstanceHistory",
+      "WorkflowRule", "WorkflowTask", "AsyncApexJob", "ApexTestQueueItem",
+      "SearchActivity", "RecentlyViewed", "LoginHistory", "EventLogFile",
+      "FeedItem", "FeedComment", "EntitySubscription", "DuplicateRecordItem",
+      "RecordAction", "ActivityHistory", "OpenActivity", "CombinedAttachment",
+      "UserDefinedLabelAssignment", "ValidationRule", "RecordType", "BusinessProcess"
+    ]
+  },
+  "outputPrefs": {
+    "defaultType": "markdown",
+    "preferTablesForListsOver": 5,
+    "includeMetadata": true,
+    "showBusinessMetrics": true
+  },
+  "preferences": {
+    "showSoql": false,
+    "autoExpandRelationships": true,
+    "enableFuzzyMatching": true,
+    "prioritizeCustomObjects": true
+  },
+  "importantObjects": [
+    "owsc__Item__c",
+    "owsc__Item_Lot__c", 
+    "owsc__Container__c",
+    "owsc__Inventory_Location__c",
+    "owsc__Order__c",
+    "owsc__Order_Item__c",
+    "Account",
+    "Contact",
+    "Product2"
+  ],
+  "frequentObjects": [
+    "owsc__Item__c",
+    "owsc__Item_Lot__c", 
+    "owsc__Container__c",
+    "owsc__Order__c",
+    "Account"
+  ],
+  "objectSynonyms": {
+    "owsc__Item__c": [
+      "item", "items", "product", "products", "inventory item", "stock item",
+      "merchandise", "goods", "sku", "product item", "catalog item"
+    ],
+    "owsc__Item_Lot__c": [
+      "lot", "lots", "batch", "batches", "item lot", "inventory lot", 
+      "stock lot", "product lot", "shipment lot", "receiving lot"
+    ],
+    "owsc__Container__c": [
+      "container", "containers", "shipping container", "cargo container",
+      "shipment", "shipments", "delivery", "deliveries"
+    ],
+    "owsc__Inventory_Location__c": [
+      "location", "locations", "warehouse", "warehouses", "facility", "facilities",
+      "site", "sites", "storage", "storage location", "inventory location",
+      "distribution center", "fulfillment center"
+    ],
+    "owsc__Order__c": [
+      "order", "orders", "purchase order", "sales order", "customer order",
+      "po", "so", "requisition", "request"
+    ],
+    "owsc__Order_Item__c": [
+      "order item", "order items", "line item", "line items", "order line",
+      "order lines", "item line", "ordered item", "ordered items"
+    ],
+    "Account": [
+      "customer", "customers", "client", "clients", "company", "companies",
+      "organization", "organizations", "business", "businesses", "vendor", "vendors",
+      "supplier", "suppliers", "distributor", "distributors"
+    ],
+    "Contact": [
+      "contact", "contacts", "person", "people", "individual", "individuals",
+      "contact person", "representative", "rep", "buyer", "purchaser"
+    ],
+    "Product2": [
+      "product", "products", "catalog item", "catalog items", "master product",
+      "product catalog", "standard product"
+    ]
+  },
+  "fieldMappings": {
+    "name": ["Name", "Title", "Product_Name__c", "Item_Name__c"],
+    "description": ["Description", "Product_Description__c", "Item_Description__c", "Comments", "Notes"],
+    "quantity": ["Quantity", "Qty", "On_Hand_Quantity__c", "Available_Quantity__c", "Stock_Level__c"],
+    "price": ["Price", "Unit_Price__c", "List_Price", "Cost", "Unit_Cost__c"],
+    "location": ["Location", "Warehouse__c", "Storage_Location__c", "Facility__c"],
+    "status": ["Status", "Order_Status__c", "Item_Status__c", "Shipment_Status__c"],
+    "date": ["CreatedDate", "LastModifiedDate", "Order_Date__c", "Ship_Date__c", "Delivery_Date__c"]
+  },
+  "domainContext": {
+    "inventory": {
+      "objects": ["owsc__Item__c", "owsc__Item_Lot__c", "owsc__Inventory_Location__c"],
+      "keywords": ["stock", "inventory", "on hand", "available", "warehouse", "storage"]
+    },
+    "orders": {
+      "objects": ["owsc__Order__c", "owsc__Order_Item__c", "Account", "Contact"],
+      "keywords": ["order", "purchase", "sales", "customer", "buyer"]
+    },
+    "shipping": {
+      "objects": ["owsc__Container__c", "owsc__Order__c", "owsc__Item_Lot__c"],
+      "keywords": ["shipment", "delivery", "container", "cargo", "logistics"]
+    },
+    "customers": {
+      "objects": ["Account", "Contact", "owsc__Order__c"],
+      "keywords": ["customer", "client", "buyer", "account", "relationship"]
+    },
+    "products": {
+      "objects": ["owsc__Item__c", "Product2", "owsc__Item_Lot__c"],
+      "keywords": ["product", "item", "sku", "catalog", "merchandise"]
+    }
+  },
+  "businessMetrics": {
+    "inventory": {
+      "turnover": "Calculate inventory turnover rates",
+      "velocity": "Track fast/slow moving items",
+      "levels": "Monitor stock levels vs minimums"
+    },
+    "sales": {
+      "trends": "Analyze sales trends over time",
+      "performance": "Track product/customer performance",
+      "forecasting": "Support demand planning"
+    }
+  },
+  "intelligentSuggestions": {
+    "enableContextualRanking": true,
+    "preferenceWeight": 0.4,
+    "recencyWeight": 0.2,
+    "successRateWeight": 0.3,
+    "contextWeight": 0.1,
+    "customObjectBoost": 2.0,
+    "namespaceBoost": 1.5
+  },
+  "responseTemplates": {
+    "inventory_summary": "Based on your inventory data, here's what I found:\n\n**Key Metrics:**\n- Total Items: {count}\n- Low Stock Alerts: {low_stock_count}\n- Most Recent Updates: {last_updated}\n\n{data_table}",
+    "order_analysis": "Here's your order analysis:\n\n**Order Summary:**\n- Total Orders: {count}\n- Date Range: {date_range}\n- Top Customers: {top_customers}\n\n{data_table}",
+    "container_tracking": "Container shipment information:\n\n**Shipping Status:**\n- Active Containers: {active_count}\n- Expected Arrivals: {expected_count}\n\n{data_table}"
+  }
+}

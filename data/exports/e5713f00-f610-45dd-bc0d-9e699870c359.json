@@ -1,0 +1,11 @@
+{
+  "status": "complete",
+  "size": 273,
+  "soql": "SELECT Id, Name FROM Account LIMIT 5",
+  "org_id": "default",
+  "sessionId": "dev",
+  "format": "csv",
+  "filename": "export-e5713f00-f610-45dd-bc0d-9e699870c359.csv",
+  "path": "D:\\MVP Cursor Apps\\orion-salesforce-mcp-server\\data\\exports\\e5713f00-f610-45dd-bc0d-9e699870c359.csv",
+  "expiresAt": 1755028588376
+}

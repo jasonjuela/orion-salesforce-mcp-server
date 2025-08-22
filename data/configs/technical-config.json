@@ -1,0 +1,85 @@
+{
+  "orgId": "wholesale-system",
+  "description": "Technical system configuration for security, performance, and operational settings",
+  "namespaces": ["owsc__"],
+
+  "guardrails": {
+    "piiRedaction": true,
+    "maxRows": 1000,
+    "defaultDateRange": "LAST_N_MONTHS:6",
+    "allowedObjects": [],
+    "blockedObjects": [
+      "UserRecordAccess", "ObjectPermissions", "PermissionSet",
+      "FlowOrchestrationWorkItem", "ProcessInstance", "ProcessInstanceHistory",
+      "WorkflowRule", "WorkflowTask", "AsyncApexJob", "ApexTestQueueItem",
+      "SearchActivity", "RecentlyViewed", "LoginHistory", "EventLogFile",
+      "FeedItem", "FeedComment", "EntitySubscription", "DuplicateRecordItem",
+      "RecordAction", "ActivityHistory", "OpenActivity", "CombinedAttachment",
+      "UserDefinedLabelAssignment", "ValidationRule", "RecordType", "BusinessProcess"
+    ]
+  },
+
+  "security": {
+    "respectFieldLevelSecurity": true,
+    "requireObjectPermissions": true,
+    "enableSecurityValidation": true,
+    "allowSystemObjects": false
+  },
+
+  "features": {
+    "dmlOperations": {
+      "enabled": false,
+      "allowedOperations": {
+        "insert": false, "update": false, "upsert": false,
+        "delete": false, "undelete": false, "merge": false
+      },
+      "safeguards": {
+        "maxRecordsPerOperation": 50,
+        "requireConfirmation": true,
+        "allowBulkOperations": false
+      }
+    },
+    "crossObjectSearch": true,
+    "intelligentObjectResolution": true,
+    "cacheDescribeResults": true
+  },
+
+  "dmlRestrictions": {
+    "allowedObjects": ["owsc__Order__c", "owsc__Order_Item__c"],
+    "blockedObjects": ["Account", "Contact", "User"],
+    "requireObjectPermissions": true,
+    "respectFieldLevelSecurity": true
+  },
+
+  "performance": {
+    "describeCache": { "ttlMs": 600000, "maxObjects": 100 },
+    "queryOptimization": { "preferIndexedFields": true, "limitSubqueries": 3, "maxJoins": 5 },
+    "rateLimiting": { "maxRequestsPerMinute": 60, "maxConcurrentRequests": 5 }
+  },
+
+  "outputPrefs": {
+    "defaultType": "markdown",
+    "preferTablesForListsOver": 5,
+    "includeMetadata": true,
+    "showBusinessMetrics": true,
+    "formatDates": "yyyy-MM-dd",
+    "formatNumbers": true
+  },
+
+  "systemPreferences": {
+    "showSoql": false,
+    "autoExpandRelationships": true,
+    "enableFuzzyMatching": true,
+    "prioritizeCustomObjects": true,
+    "logLevel": "info",
+    "enableDebugMode": false
+  },
+
+  "apiLimits": {
+    "dailyApiLimit": 100000,
+    "warningThreshold": 0.8,
+    "emergencyThreshold": 0.95
+  },
+
+  "prompt_version": "2.1.0"
+}
